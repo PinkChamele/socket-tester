@@ -1,24 +1,27 @@
 <script>
 	import ConnectForm from '../components/connect-form.svelte';
 	import MessageInput from '../components/message-input.svelte';
-	import SubscribedMessages from '../components/subscribed-message.svelte';
+	import SubscribedMessages from '../components/subscribed-messages.svelte';
 	import SavedEvents from '../components/saved-events.svelte';
-
-	let url = 'localhost:3000/api/v1';
-	let token = '';
-
-
+	import ReceivedMessages from '../components/received-messages.svelte';
+	import LoadChart from '../components/load/load-chart.svelte';
+	import LoadSetupModal from '../components/load/load-setup-modal.svelte';
 </script>
 
 <main>
-	<ConnectForm url="{url}" token="{token}" />
+	<ConnectForm />
 	<section id="alerts"></section>
 	<section id="main-panel">
 		<MessageInput />
 		<SubscribedMessages />
 		<SavedEvents />
 	</section>
-	<section id="messages"></section>
+	<section id="messages">
+		<ReceivedMessages />
+	</section>
+
+	<LoadSetupModal />
+	<LoadChart />
 </main>
 
 <style>

@@ -1,29 +1,48 @@
 <script>
-	import { socket } from '$lib/socket-store.js';
-	import {addSubscribedEvent, subscribedEventsStore} from '$lib/subscribed-events-store.js';
+	import { onMount } from 'svelte';
+	import * as subscribedMessages from '$lib/subscribed-message-store.js';
 
-	let eventName = '';
+	let newEventName = '';
+	const subscribedMessagesStore = subscribedMessages.store;
+
+	onMount(() => {
+		subscribedMessages.bindToLocalStore();
+	});
 
 	function subscribe() {
-		addSubscribedEvent(eventName);
+		subscribedMessages.add(newEventName);
+	}
 
-
-		socket.on(eventName,
-			/** @param {unknown} data */
-			(data) => console.log(`Received ${eventName}`, data),
-		);
+	/**
+	 * @param {string} eventName
+	 */
+	function unsubscribe(eventName) {
+		subscribedMessages.remove(eventName);
 	}
 </script>
 
 <div id="subscribed-messages">
 	<div>Subscribed to:</div>
-	<ul>
-		{#each $subscribedEventsStore as event}
-			<li>{event}</li>
+	<div class="subscribed-messages-list">
+		{#each Array.from($subscribedMessagesStore) as event}
+			<div>
+				<div
+					class='event-subscription'
+					id="event-sub-${event.replaceAll(/\//g, '-')}"
+				>
+					{event}
+					<span class="button-list">
+						<button
+							class="unsubscribe-button hidden"
+							on:click="{() => unsubscribe(event)}"
+						>✖</button>
+					</span>
+				</div>
+			</div>
 		{/each}
-	</ul>
+	</div>
 	<form on:submit|preventDefault={subscribe}>
-		<input type="text" bind:value={eventName} placeholder="event" />
+		<input type="text" bind:value={newEventName} placeholder="event" />
 		<button type="submit">Subscribe</button>
 	</form>
 </div>
@@ -59,11 +78,11 @@
         z-index: 4;
     }
 
-    #subscribed-messages>*:not(#subscribed-messages-list) {
+    #subscribed-messages>*:not(.subscribed-messages-list) {
         height: fit-content
     }
 
-    #subscribed-messages-list {
+    .subscribed-messages-list {
         flex-grow: 2;
 
         display: flex;

@@ -1,46 +1,69 @@
 <script>
-	import {status, connect, disconnect} from '$lib/socket-store.js';
+	import { onMount } from 'svelte';
+	import { statusStore, connect, disconnect } from '$lib/socket-store.js';
+	import * as theme from '$lib/theme-store.js';
 
 	/**
-	 * @import {ChangeEventHandler} from 'svelte/elements'
+	 * @import {ChangeEventHandler} from "svelte/elements"
+	 * @import {ConnectionProperties} from "$lib/socket-store"
 	 */
 
-	/** @type {string} */
-	export let url;
-	/** @type {string} */
-	export let token;
+	/** @type {ConnectionProperties} */
+	let connectionProps = { url: '', token: '' };
+
+	const themeStore = theme.store;
+
+	onMount(() => {
+		const connectionPropsJSON = localStorage.getItem('connectionProps');
+
+		if (connectionPropsJSON) {
+			connectionProps = JSON.parse(connectionPropsJSON);
+		}
+	});
 
 	function handleConnect() {
-		if (!url || !token) {
+		if (!connectionProps.url || !connectionProps.token) {
 			alert("Please provide both URL and Token.");
 
 			return;
 		}
 
-		if ($status === 'connected') {
-			disconnect();
+		if ($statusStore !== 'connected') {
+			connect(connectionProps);
+
+			localStorage.setItem('connectionProps', JSON.stringify(connectionProps));
 		} else {
-			connect();
+			disconnect();
 		}
 	}
 
+	onMount(() => {
+		theme.bindToLocalStore();
+		themeStore.subscribe((value) => document.documentElement.setAttribute('data-theme', value));
+	});
+
 	/** @type {ChangeEventHandler<HTMLInputElement>} */
 	function toggleTheme(event) {
-		const theme = event.currentTarget.checked ? 'dark' : 'light';
+		const newTheme = event.currentTarget.checked ? 'dark' : 'light';
 
-		document.documentElement.setAttribute('data-theme', theme);
+		theme.set(newTheme);
 	}
 </script>
 
 <div id="url-input" class="form">
-	<input type="text" bind:value={url} placeholder="url" class="inputs-start" />
-	<input type="text" bind:value={token} placeholder="token" class="inputs-middle" />
+	<input type="text" bind:value={connectionProps.url} placeholder="url" class="inputs-start" />
+	<input type="text" bind:value={connectionProps.token} placeholder="token" class="inputs-middle" />
 	<button on:click={handleConnect} class="inputs-end">Connect</button>
-	<div class="indicator {$status}">{$status}</div>
+	<div class="indicator {$statusStore}">{$statusStore}</div>
 
 	<label id="theme-switch" class="theme-switch">
 		Dark:
-		<input type="checkbox" id="checkbox_theme" on:change="{toggleTheme}" />
+		<input
+			type="checkbox"
+			id="checkbox_theme"
+			on:change="{toggleTheme}"
+			checked="{$themeStore === 'dark'}"
+		/>
 	</label>
 </div>
 

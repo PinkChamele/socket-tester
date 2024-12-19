@@ -1,28 +1,68 @@
 <script>
-	import { status, socket } from '$lib/socket-store.js';
+	import * as socket from '$lib/socket-store.js';
+	import * as messages from '$lib/messages-store.js';
+	import * as currentEvent from '$lib/current-event-store.js';
+	import * as loadModel from '$lib/load-models/model-store.js';
+	import { } from './load/load-setup-modal.svelte';
 
-	let eventName = '';
-	let message = '';
+	const statusStore = socket.statusStore;
+	const currentEventStore = currentEvent.store;
+	const loadModelStore = loadModel.store;
 
 	function sendMessage() {
-		if ($status === 'connected' && eventName) {
-			try {
-				const parsedMessage = message ? JSON.parse(message) : {};
+		const body = $currentEventStore.bodyJSON;
+		const eventName = $currentEventStore.eventName;
 
-				socket.emit(eventName, parsedMessage);
-			} catch {
-				alert("Invalid JSON format");
-			}
+		if ($statusStore !== 'connected' || !$currentEventStore.eventName) {
+			return;
 		}
+
+		/** @type {unknown} */
+		let parsedMessage;
+
+		try {
+			parsedMessage = body ? JSON.parse(body) : {};
+		} catch {
+			alert("Invalid JSON format");
+		}
+
+		const newLength = messages.push({
+			name: eventName,
+			data: parsedMessage,
+			isOutgoing: true,
+			ackFor: null,
+		});
+
+		socket.emit(eventName, parsedMessage, (data) => messages.push({
+			name: eventName,
+			data,
+			isOutgoing: false,
+			ackFor: newLength - 1,
+		}));
+		currentEvent.save();
+	}
+
+	function startLoadTest() {
+		if ($statusStore !== 'connected' || !$currentEventStore.eventName || !$loadModelStore) {
+			return;
+		}
+
+		$loadModelStore.start(12000);
+	}
+
+	function openLoadSettings() {
+		loadModel.isSettingsVisible.set(true);
 	}
 </script>
 
 <div id="message-input-area">
-	<textarea bind:value={message} placeholder="Message"></textarea>
+	<textarea bind:value={$currentEventStore.bodyJSON} placeholder="Message"></textarea>
 	<form on:submit|preventDefault={sendMessage}>
-		<input type="text" bind:value={eventName} placeholder="event" class="inputs-start" />
+		<input type="text" bind:value={$currentEventStore.eventName} placeholder="event" class="inputs-start" />
 		<button type="submit" class="inputs-end">Send Message</button>
 	</form>
+	<button on:click={openLoadSettings}>Open load settings</button>
+	<button on:click={startLoadTest}>Start load test</button>
 </div>
 
 <style>
@@ -42,5 +82,9 @@
         min-height: 350px;
 
         resize: vertical;
+    }
+
+		#message-input-area > * {
+        margin-top: 5px;
     }
 </style>

@@ -1,18 +1,63 @@
 <script>
-	let savedEvents = [];
-	function addEventTab(event) {
-		savedEvents = [...savedEvents, event];
+	import * as events from '$lib/events-store.js';
+	import * as currentEvent from '$lib/current-event-store.js';
+	import { onMount } from 'svelte';
+
+	/**
+	 * @import {WsEvent} from "$lib/events-store.js"
+	 */
+
+	const eventsStore = events.store;
+	const currentEventStore = currentEvent.store;
+
+	onMount(() => {
+		events.bindToLocalStore();
+	});
+
+	function addEventTab() {
+		const newLength = events.addBlank();
+
+		currentEvent.updateTabIndex(newLength - 1);
+	}
+
+	/**
+	 *  @param {WsEvent} event
+	 *  @param {number} index
+	 */
+	function openTab(event, index) {
+		currentEvent.updateEventName(event.eventName);
+		currentEvent.updateBody(event.bodyJSON);
+		currentEvent.updateTabIndex(index);
+	}
+
+	/** @param {number} index */
+	function closeTab(index) {
+		events.remove(index);
+		currentEvent.updateTabIndex(index);
 	}
 </script>
 
 <div id="saved-events">
-	{#each savedEvents as event}
-		<div class="event-tab">{event}</div>
+	{#each $eventsStore as event, index}
+		<span class="button-list">
+			<div class="event-tab" on:click={() => openTab(event, index)}>
+				<span
+					class="{'event-tab-name' + ($currentEventStore.tabIndex === index && ' event-tab-active')}"
+				>{event.name}
+				</span>
+			</div>
+			<button class="event-tab-close" on:click={() => closeTab(index)}>✕</button>
+		</span>
 	{/each}
-	<button on:click={() => addEventTab('New Tab')}>+</button>
+	<button on:click={addEventTab}>+</button>
 </div>
 
 <style>
+		.button-list {
+				display: flex;
+				flex-direction: row;
+		}
+
     #saved-events {
         flex-basis: 13em;
 
